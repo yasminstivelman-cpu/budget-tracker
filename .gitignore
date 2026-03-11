@@ -28,6 +28,9 @@ yarn-error.log*
 # local env files
 .env*.local
 
+# sensitive server config (contains OAuth tokens)
+/data/contributor-config.json
+
 # vercel
 .vercel
 
