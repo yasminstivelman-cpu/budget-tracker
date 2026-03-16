@@ -40,6 +40,12 @@ function extractSpreadsheetId(url: string): string | null {
 
 export async function POST(req: NextRequest) {
   const session = await auth();
+  console.log("[setup POST] session:", JSON.stringify({
+    hasSession: !!session,
+    hasAccessToken: !!session?.accessToken,
+    hasRefreshToken: !!session?.refreshToken,
+    email: session?.user?.email,
+  }));
   if (!session?.accessToken || !session.refreshToken) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

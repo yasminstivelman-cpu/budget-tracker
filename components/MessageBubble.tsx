@@ -1,7 +1,7 @@
 import type { ExpenseRow } from "@/lib/server/sheets";
 
 export function MessageBubble({ expense }: { expense: ExpenseRow }) {
-  const { date, description, amount, contributor } = expense;
+  const { date, description, amount, category, card, contributor } = expense;
 
   return (
     <div className="flex flex-col items-start max-w-sm">
@@ -14,8 +14,20 @@ export function MessageBubble({ expense }: { expense: ExpenseRow }) {
       <div className="rounded-2xl rounded-tl-sm bg-gray-100 px-4 py-2.5 shadow-sm">
         <p className="text-sm text-gray-900">{description}</p>
         <p className="mt-1 text-sm font-semibold text-blue-600">
-          ${amount.toFixed(2)}
+          R${amount.toFixed(2)}
         </p>
+        <div className="mt-1.5 flex gap-1.5">
+          {category && (
+            <span className="rounded-full bg-white px-2 py-0.5 text-xs text-gray-500 border border-gray-200">
+              {category}
+            </span>
+          )}
+          {card && (
+            <span className="rounded-full bg-white px-2 py-0.5 text-xs text-gray-500 border border-gray-200">
+              {card}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

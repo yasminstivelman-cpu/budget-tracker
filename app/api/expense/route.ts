@@ -8,6 +8,8 @@ const schema = z.object({
   token: z.string(),
   description: z.string().min(1),
   amount: z.number().positive(),
+  category: z.string().min(1),
+  card: z.string().min(1),
   contributor: z.string().optional(),
 });
 
@@ -19,7 +21,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
-  const { token, description, amount, contributor } = result.data;
+  const { token, description, amount, category, card, contributor } = result.data;
 
   if (!verifySessionToken(token)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -45,7 +47,8 @@ export async function POST(req: NextRequest) {
       date,
       description,
       amount,
-      "",
+      category,
+      card,
       contributor ?? "",
     ]);
   } catch (e) {

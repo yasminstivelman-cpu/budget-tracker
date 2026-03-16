@@ -1,9 +1,9 @@
 # Product Requirements Document
 # Budget Tracker — Google Sheets Chat Interface
 
-**Version:** 1.1
-**Date:** 2026-03-08
-**Status:** Draft
+**Version:** 1.3
+**Date:** 2026-03-16
+**Status:** In Progress
 
 ---
 
@@ -31,7 +31,7 @@ Manually opening a spreadsheet to log small, frequent expenses (e.g., a coffee, 
 
 ## 4. Non-Goals (v1)
 
-- AI/NLP parsing — expense format will follow a simple, defined pattern.
+- ~~AI/NLP parsing — expense format will follow a simple, defined pattern.~~ *(implemented via Telegram bot — see Section 12)*
 - Editing or deleting past entries from the UI.
 - Charts, dashboards, or analytics views.
 - Mobile-native app.
@@ -94,15 +94,15 @@ Manually opening a spreadsheet to log small, frequent expenses (e.g., a coffee, 
 - FR-10: The setup page displays the generated **Contributor link** after successful configuration.
 - FR-11: The Contributor link format is: `https://<domain>/contribute/<token>` where `<token>` is a short random string tied to the Owner's configuration.
 
-### 7.3 Expense Input (shared by Owner and Contributor)
-- FR-12: A text input field accepts expense messages.
-- FR-13: Expected message format: `<description>, <amount>, <category>, <card>`
-  Example: `Coffee at Blue Bottle, 5.50, Food, Visa`
-- FR-14: All four fields are required. The app shows an inline error if any are missing.
-- FR-15: Amount must be a valid positive number; the app shows an inline error if not.
-- FR-16: Submitting appends a new row to the connected spreadsheet with columns:
-  `Date | Description | Amount | Category | Card`
-- FR-17: Date is auto-populated server-side (ISO 8601, UTC).
+### 7.3 Expense Input (Contributor form)
+- FR-12: The expense form has four separate fields: **Description** (text), **Amount** (number), **Category** (dropdown), **Card** (dropdown).
+- FR-13: All four fields are required. The app shows an inline error if any are missing.
+- FR-14: Amount must be a valid positive number (min 0.01); currency is **R$**.
+- FR-15: **Category** options: `Restaurante`, `Mercado`, `Streaming`, `Farmácia`, `Viagem`, `Outros`.
+- FR-16: **Card** options: `Itau`, `Alelo`, `Caju`, `Conta Gero`, `Conta Yas`.
+- FR-17: Submitting appends a new row to the connected spreadsheet with columns:
+  `Date | Description | Amount | Category | Card | Contributor`
+- FR-18: Date is auto-populated server-side.
 
 ### 7.4 Owner Chat View
 - FR-18: Each submitted expense (by anyone) appears as a message bubble in the chat UI.
@@ -173,36 +173,51 @@ Manually opening a spreadsheet to log small, frequent expenses (e.g., a coffee, 
 |  Connected to: My Budget 2026                    |
 +--------------------------------------------------+
 |                                                  |
-|  +-----------------------------------------+    |
-|  | You: Coffee, 5.50, Food, Visa           |    |
-|  | Logged: 2026-03-08 | $5.50 | Food [OK] |    |
-|  +-----------------------------------------+    |
+|  you · 2026-03-12                                |
+|  +---------------------------------------+       |
+|  | Almoço                                |       |
+|  | R$45.90                               |       |
+|  | [Restaurante] [Itau]                  |       |
+|  +---------------------------------------+       |
 |                                                  |
-|  +-----------------------------------------+    |
-|  | Ana: Uber, 12.00, Transport, Amex       |    |
-|  | Logged: 2026-03-08 | $12 | Transport   |    |
-|  +-----------------------------------------+    |
+|  ana · 2026-03-12                                |
+|  +---------------------------------------+       |
+|  | Uber                                  |       |
+|  | R$12.00                               |       |
+|  | [Viagem] [Conta Yas]                  |       |
+|  +---------------------------------------+       |
 |                                                  |
-+--------------------------------------------------+
-|  [ description, amount, category, card   Send ] |
 +--------------------------------------------------+
 ```
 
-### 9.4 Contributor — Expense Form (`/contribute/<token>`)
+### 9.4 Contributor — Expense Form (`/contribute`)
 ```
 +--------------------------------------------------+
 |  Log an Expense                                  |
 +--------------------------------------------------+
 |                                                  |
-|  Type your expense:                             |
-|  [ description, amount, category, card    ]     |
+|  Description                                    |
+|  [ e.g. Almoço, Uber, Academia            ]     |
 |                                                  |
-|  Example: Coffee, 5.50, Food, Visa              |
+|  Amount                                         |
+|  [ R$ 0.00                                ]     |
+|                                                  |
+|  Category                                       |
+|  [ Select a category ▾ ]                        |
+|    Restaurante / Mercado / Streaming /           |
+|    Farmácia / Viagem / Outros                   |
+|                                                  |
+|  Card                                           |
+|  [ Select a card ▾ ]                            |
+|    Itau / Alelo / Caju / Conta Gero /           |
+|    Conta Yas                                    |
 |                                                  |
 |  [ Submit ]                                     |
 |                                                  |
 |  -- After submit: --                            |
-|  Expense logged successfully!                   |
+|  ✅ Expense submitted!                          |
+|  It has been added to the spreadsheet.          |
+|  [ Submit another ]                             |
 |                                                  |
 +--------------------------------------------------+
 ```
@@ -211,10 +226,10 @@ Manually opening a spreadsheet to log small, frequent expenses (e.g., a coffee, 
 
 ## 10. Google Sheets Schema
 
-| Column | A | B | C | D | E |
-|--------|---|---|---|---|---|
-| Header | Date | Description | Amount | Category | Card |
-| Example | 2026-03-08 | Coffee at Blue Bottle | 5.50 | Food | Visa |
+| Column | A | B | C | D | E | F |
+|--------|---|---|---|---|---|---|
+| Header | Date | Description | Amount | Category | Card | Contributor |
+| Example | 2026-03-12 | Almoço no Restaurante X | 45.90 | Restaurante | Itau | user@email.com |
 
 ---
 
@@ -225,3 +240,53 @@ Manually opening a spreadsheet to log small, frequent expenses (e.g., a coffee, 
 - Currency selection (assumes single currency, user-defined).
 - Contributor identity / attribution (v1 does not track who submitted what).
 - Revoking individual Contributor access without resetting the token.
+
+---
+
+## 12. Telegram Bot Integration *(added 2026-03-16)*
+
+### 12.1 Overview
+
+An AI-powered Telegram bot that allows the Owner (and authorized users) to log expenses and query the spreadsheet via text or voice messages — no UI required.
+
+### 12.2 New API Route
+
+`POST /api/telegram` — Telegram webhook receiver.
+
+### 12.3 Functional Requirements
+
+- **FR-T01:** The webhook accepts Telegram `Update` objects (text messages and voice notes).
+- **FR-T02:** Only Telegram user IDs listed in `ALLOWED_TELEGRAM_IDS` (env var, comma-separated) are processed; all others are silently ignored.
+- **FR-T03:** Voice messages are transcribed to text via OpenAI Whisper (`whisper-1`, language `pt`).
+- **FR-T04:** Claude (`claude-sonnet-4-20250514`) classifies each message as `EXPENSE` or `QUERY`.
+- **FR-T05:** For `EXPENSE` intent, Claude extracts `description`, `amount`, `category`, and `card` from the message and appends the row to the spreadsheet (contributor field set to `"Telegram"`).
+- **FR-T06:** For `QUERY` intent, all sheet rows are fetched and passed to Claude, which answers the question in the same language (PT/EN) and replies to the chat.
+- **FR-T07:** On success, the bot replies with a formatted confirmation. On error, it replies with the error message.
+- **FR-T08:** The bot uses the Owner's refresh token (`OWNER_REFRESH_TOKEN`) to obtain a fresh access token for every request — no session required.
+
+### 12.4 New Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `TELEGRAM_BOT_TOKEN` | Bot token from BotFather |
+| `OPENAI_API_KEY` | For Whisper voice transcription |
+| `ANTHROPIC_API_KEY` | For Claude intent detection, parsing, and query answering |
+| `ALLOWED_TELEGRAM_IDS` | Comma-separated list of authorized Telegram user IDs |
+| `OWNER_REFRESH_TOKEN` | Owner's Google OAuth refresh token (for bot-initiated writes) |
+| `OWNER_SPREADSHEET_ID` | Target spreadsheet ID |
+| `OWNER_SHEET_NAME` | Target sheet name (default: `Expenses`) |
+
+### 12.5 Dependencies Added
+
+- `@anthropic-ai/sdk` — Claude API client
+
+---
+
+## 13. Changelog
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.0 | 2026-03-12 | Initial draft |
+| 1.1 | 2026-03-12 | Added UX sketches and Sheets schema |
+| 1.2 | 2026-03-12 | Refined FR details; full app scaffolded |
+| 1.3 | 2026-03-16 | Implemented Category & Card fields end-to-end; added Telegram bot with AI parsing (Section 12); localized currency to R$; added `.env.local.example` |

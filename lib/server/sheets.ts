@@ -22,7 +22,8 @@ export type ExpenseRow = {
   date: string;
   description: string;
   amount: number;
-  notes: string;
+  category: string;
+  card: string;
   contributor: string;
 };
 
@@ -34,7 +35,7 @@ export async function getExpenseRows(
   const sheets = getSheetsClient(accessToken);
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${sheetName}!A:E`,
+    range: `${sheetName}!A:F`,
   });
   const rows = res.data.values ?? [];
   return rows
@@ -43,8 +44,9 @@ export async function getExpenseRows(
       date: String(row[0] ?? ""),
       description: String(row[1] ?? ""),
       amount: Number(row[2]),
-      notes: String(row[3] ?? ""),
-      contributor: String(row[4] ?? ""),
+      category: String(row[3] ?? ""),
+      card: String(row[4] ?? ""),
+      contributor: String(row[5] ?? ""),
     }));
 }
 
@@ -52,7 +54,7 @@ export async function appendExpenseRow(
   accessToken: string,
   spreadsheetId: string,
   sheetName: string,
-  row: [string, string, number, string, string]
+  row: [string, string, number, string, string, string]
 ) {
   const sheets = getSheetsClient(accessToken);
   await sheets.spreadsheets.values.append({
@@ -62,6 +64,19 @@ export async function appendExpenseRow(
     insertDataOption: "INSERT_ROWS",
     requestBody: { values: [row] },
   });
+}
+
+export async function readSheetRows(
+  accessToken: string,
+  spreadsheetId: string,
+  sheetName: string
+): Promise<string[][]> {
+  const sheets = getSheetsClient(accessToken);
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `${sheetName}!A:F`,
+  });
+  return res.data.values ?? [];
 }
 
 export async function getAccessTokenFromRefreshToken(

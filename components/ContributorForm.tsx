@@ -17,6 +17,8 @@ export function ContributorForm() {
   // Expense state
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState("");
+  const [card, setCard] = useState("");
   const [contributor, setContributor] = useState("");
   const [expenseError, setExpenseError] = useState("");
   const [expenseLoading, setExpenseLoading] = useState(false);
@@ -68,6 +70,8 @@ export function ContributorForm() {
           token: sessionToken,
           description,
           amount: parseFloat(amount),
+          category,
+          card,
           contributor,
         }),
       });
@@ -94,6 +98,8 @@ export function ContributorForm() {
   function handleReset() {
     setDescription("");
     setAmount("");
+    setCategory("");
+    setCard("");
     setExpenseError("");
     setScreen("expense");
   }
@@ -173,6 +179,9 @@ export function ContributorForm() {
     );
   }
 
+  const selectClass =
+    "mt-1.5 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white";
+
   // Expense screen
   return (
     <form onSubmit={handleExpenseSubmit} className="space-y-5">
@@ -189,7 +198,7 @@ export function ContributorForm() {
           required
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="e.g. Team lunch, Taxi to client"
+          placeholder="e.g. Almoço, Uber, Academia"
           className="mt-1.5 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
       </div>
@@ -203,7 +212,7 @@ export function ContributorForm() {
         </label>
         <div className="relative mt-1.5">
           <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-gray-400">
-            $
+            R$
           </span>
           <input
             id="amount"
@@ -214,9 +223,56 @@ export function ContributorForm() {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            className="block w-full rounded-lg border border-gray-300 py-2 pl-7 pr-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="block w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
+      </div>
+
+      <div>
+        <label
+          htmlFor="category"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Category
+        </label>
+        <select
+          id="category"
+          required
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className={selectClass}
+        >
+          <option value="" disabled>Select a category</option>
+          <option value="Restaurante">Restaurante</option>
+          <option value="Mercado">Mercado</option>
+          <option value="Streaming">Streaming</option>
+          <option value="Farmácia">Farmácia</option>
+          <option value="Viagem">Viagem</option>
+          <option value="Outros">Outros</option>
+        </select>
+      </div>
+
+      <div>
+        <label
+          htmlFor="card"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Card
+        </label>
+        <select
+          id="card"
+          required
+          value={card}
+          onChange={(e) => setCard(e.target.value)}
+          className={selectClass}
+        >
+          <option value="" disabled>Select a card</option>
+          <option value="Itau">Itau</option>
+          <option value="Alelo">Alelo</option>
+          <option value="Caju">Caju</option>
+          <option value="Conta Gero">Conta Gero</option>
+          <option value="Conta Yas">Conta Yas</option>
+        </select>
       </div>
 
       {expenseError && (
