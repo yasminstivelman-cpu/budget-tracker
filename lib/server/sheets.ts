@@ -35,7 +35,7 @@ export async function getExpenseRows(
   const sheets = getSheetsClient(accessToken);
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${sheetName}!A:F`,
+    range: `'${sheetName}'!A:F`,
   });
   const rows = res.data.values ?? [];
   return rows
@@ -59,9 +59,9 @@ export async function appendExpenseRow(
   const sheets = getSheetsClient(accessToken);
   await sheets.spreadsheets.values.append({
     spreadsheetId,
-    range: `${sheetName}!A1`,
+    range: `'${sheetName}'!A1`,
     valueInputOption: "USER_ENTERED",
-    insertDataOption: "INSERT_ROWS",
+    insertDataOption: "OVERWRITE",
     requestBody: { values: [row] },
   });
 }
@@ -74,7 +74,7 @@ export async function readSheetRows(
   const sheets = getSheetsClient(accessToken);
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${sheetName}!A:F`,
+    range: `'${sheetName}'!A:F`,
   });
   return res.data.values ?? [];
 }
