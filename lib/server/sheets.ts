@@ -57,11 +57,19 @@ export async function appendExpenseRow(
   row: [string, string, number, string, string, string]
 ) {
   const sheets = getSheetsClient(accessToken);
-  await sheets.spreadsheets.values.append({
+
+  // Find the first empty row by reading column A
+  const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `'${sheetName}'!A1`,
+    range: `'${sheetName}'!A:A`,
+  });
+  const numRows = res.data.values?.length ?? 0;
+  const nextRow = numRows + 1;
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `'${sheetName}'!A${nextRow}`,
     valueInputOption: "USER_ENTERED",
-    insertDataOption: "OVERWRITE",
     requestBody: { values: [row] },
   });
 }
