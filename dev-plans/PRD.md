@@ -257,10 +257,10 @@ An AI-powered Telegram bot that allows the Owner (and authorized users) to log e
 
 - **FR-T01:** The webhook accepts Telegram `Update` objects (text messages and voice notes).
 - **FR-T02:** Only Telegram user IDs listed in `ALLOWED_TELEGRAM_IDS` (env var, comma-separated) are processed; all others are silently ignored.
-- **FR-T03:** Voice messages are transcribed to text via OpenAI Whisper (`whisper-1`, language `pt`).
-- **FR-T04:** Claude (`claude-sonnet-4-20250514`) classifies each message as `EXPENSE` or `QUERY`.
-- **FR-T05:** For `EXPENSE` intent, Claude extracts `description`, `amount`, `category`, and `card` from the message and appends the row to the spreadsheet (contributor field set to `"Telegram"`).
-- **FR-T06:** For `QUERY` intent, all sheet rows are fetched and passed to Claude, which answers the question in the same language (PT/EN) and replies to the chat.
+- **FR-T03:** Only text messages are supported; voice is handled natively by Telegram before sending.
+- **FR-T04:** Gemini (`gemini-1.5-flash`) classifies each message as `EXPENSE` or `QUERY`.
+- **FR-T05:** For `EXPENSE` intent, Gemini extracts `description`, `amount`, `category`, and `card` from the message and appends the row to the spreadsheet (contributor field set to `"Telegram"`).
+- **FR-T06:** For `QUERY` intent, all sheet rows are fetched and passed to Gemini, which answers the question in the same language (PT/EN) and replies to the chat.
 - **FR-T07:** On success, the bot replies with a formatted confirmation. On error, it replies with the error message.
 - **FR-T08:** The bot uses the Owner's refresh token (`OWNER_REFRESH_TOKEN`) to obtain a fresh access token for every request — no session required.
 
@@ -269,8 +269,7 @@ An AI-powered Telegram bot that allows the Owner (and authorized users) to log e
 | Variable | Description |
 |----------|-------------|
 | `TELEGRAM_BOT_TOKEN` | Bot token from BotFather |
-| `OPENAI_API_KEY` | For Whisper voice transcription |
-| `ANTHROPIC_API_KEY` | For Claude intent detection, parsing, and query answering |
+| `GEMINI_API_KEY` | For Gemini intent detection, parsing, and query answering |
 | `ALLOWED_TELEGRAM_IDS` | Comma-separated list of authorized Telegram user IDs |
 | `OWNER_REFRESH_TOKEN` | Owner's Google OAuth refresh token (for bot-initiated writes) |
 | `OWNER_SPREADSHEET_ID` | Target spreadsheet ID |
@@ -278,7 +277,7 @@ An AI-powered Telegram bot that allows the Owner (and authorized users) to log e
 
 ### 12.5 Dependencies Added
 
-- `@anthropic-ai/sdk` — Claude API client
+- `@google/generative-ai` — Gemini API client
 
 ---
 
