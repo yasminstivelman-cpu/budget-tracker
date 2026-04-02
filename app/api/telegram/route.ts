@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
 import { appendExpenseRow, readSheetRows, getAccessTokenFromRefreshToken, getLastExpenseRowNumber, updateExpenseRow } from "@/lib/server/sheets";
-import { readContributorConfig } from "@/lib/server/config";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -174,11 +173,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ ok: true });
     }
 
-    const config = readContributorConfig();
-    if (!config) throw new Error("Spreadsheet not configured");
-    const accessToken = await getAccessTokenFromRefreshToken(config.ownerRefreshToken);
-    const spreadsheetId = config.spreadsheetId;
-    const sheetName = config.sheetName;
+    const refreshToken = process.env.OWNER_REFRESH_TOKEN;
+    if (!refreshToken) throw new Error("OWNER_REFRESH_TOKEN is not set");
+    const accessToken = await getAccessTokenFromRefreshToken(refreshToken);
+    const spreadsheetId = process.env.OWNER_SPREADSHEET_ID ?? "";
+    const sheetName = process.env.OWNER_SHEET_NAME ?? "Expenses";
 
     const intent = await detectIntent(text);
 
