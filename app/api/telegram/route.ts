@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
-import { appendExpenseRow, readSheetRows, getAccessTokenFromRefreshToken } from "@/lib/server/sheets";
+import { appendExpenseRow, readSheetRows, getAccessTokenFromRefreshToken, getLastExpenseRowNumber, updateExpenseRow } from "@/lib/server/sheets";
+import { readContributorConfig } from "@/lib/server/config";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -60,16 +61,40 @@ async function transcribeVoice(audioBuffer: Buffer): Promise<string> {
   return result.response.text().trim();
 }
 
-async function detectIntent(text: string): Promise<"EXPENSE" | "QUERY"> {
+async function detectIntent(text: string): Promise<"EXPENSE" | "QUERY" | "EDIT"> {
   const result = await model.generateContent(
     `You detect the intent of a message about personal finances.
-Reply with exactly one word: EXPENSE if the user is logging a new purchase (e.g. "almoço R$45", "gastei 30 reais no mercado"), or QUERY if the user is asking about past expenses (e.g. "quanto gastei?", "show last expenses", "resumo do mês").
+Reply with exactly one word:
+- EXPENSE if the user is logging a new purchase (e.g. "almoço R$45", "gastei 30 reais no mercado")
+- QUERY if the user is asking about past expenses (e.g. "quanto gastei?", "show last expenses", "resumo do mês")
+- EDIT if the user wants to correct or update the last saved expense (e.g. "corrija o valor para 50", "muda a categoria para Mercado", "o valor estava errado, é 45", "fix the amount", "change the description")
 
 Message: ${text}`
   );
   const intent = result.response.text().trim().toUpperCase();
-  if (intent === "EXPENSE" || intent === "QUERY") return intent;
+  if (intent === "EXPENSE" || intent === "QUERY" || intent === "EDIT") return intent;
   return "EXPENSE";
+}
+
+const PartialExpense = z.object({
+  description: z.string().optional(),
+  amount: z.number().positive().optional(),
+  category: z.enum(["Restaurante", "Mercado", "Streaming", "Farmácia", "Viagem", "Outros"]).optional(),
+  card: z.enum(["Itau", "Alelo", "Caju", "Conta Gero", "Conta Yas"]).optional(),
+});
+
+async function parseExpenseEdit(text: string): Promise<z.infer<typeof PartialExpense>> {
+  const result = await model.generateContent(
+    `You extract the fields the user wants to update in the last saved expense.
+Return only a JSON object containing only the fields being changed — omit any field that is not explicitly mentioned.
+Fields: description (string), amount (positive number in BRL, no currency symbol), category (one of: Restaurante, Mercado, Streaming, Farmácia, Viagem, Outros), card (one of: Itau, Alelo, Caju, Conta Gero, Conta Yas).
+Return only the JSON object with no preamble and no null values.
+
+Message: ${text}`
+  );
+  const raw = result.response.text().trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
+  const json: unknown = JSON.parse(raw);
+  return PartialExpense.parse(json);
 }
 
 async function parseExpense(text: string): Promise<z.infer<typeof ParsedExpense>> {
@@ -149,11 +174,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ ok: true });
     }
 
-    const refreshToken = process.env.OWNER_REFRESH_TOKEN;
-    if (!refreshToken) throw new Error("OWNER_REFRESH_TOKEN is not set");
-    const accessToken = await getAccessTokenFromRefreshToken(refreshToken);
-    const spreadsheetId = process.env.OWNER_SPREADSHEET_ID ?? "";
-    const sheetName = process.env.OWNER_SHEET_NAME ?? "Expenses";
+    const config = readContributorConfig();
+    if (!config) throw new Error("Spreadsheet not configured");
+    const accessToken = await getAccessTokenFromRefreshToken(config.ownerRefreshToken);
+    const spreadsheetId = config.spreadsheetId;
+    const sheetName = config.sheetName;
 
     const intent = await detectIntent(text);
 
@@ -172,6 +197,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         chatId,
         `✅ Salvo!\n📝 ${expense.description}\n💰 R$${expense.amount}\n🏷️ ${expense.category} · ${expense.card}`
       );
+    } else if (intent === "EDIT") {
+      const changes = await parseExpenseEdit(text);
+      const rowNumber = await getLastExpenseRowNumber(accessToken, spreadsheetId, sheetName);
+      if (!rowNumber) {
+        await sendTelegramMessage(chatId, "❌ Nenhuma despesa encontrada para editar.");
+      } else {
+        const updated = await updateExpenseRow(accessToken, spreadsheetId, sheetName, rowNumber, changes);
+        await sendTelegramMessage(
+          chatId,
+          `✏️ Atualizado!\n📝 ${updated.description}\n💰 R$${updated.amount}\n🏷️ ${updated.category} · ${updated.card}`
+        );
+      }
     } else {
       const rows = await readSheetRows(accessToken, spreadsheetId, sheetName);
       const answer = await answerQuery(text, rows);

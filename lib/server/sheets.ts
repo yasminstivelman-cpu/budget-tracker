@@ -74,6 +74,69 @@ export async function appendExpenseRow(
   });
 }
 
+export async function getLastExpenseRowNumber(
+  accessToken: string,
+  spreadsheetId: string,
+  sheetName: string
+): Promise<number | null> {
+  const sheets = getSheetsClient(accessToken);
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `'${sheetName}'!A:F`,
+  });
+  const rows = res.data.values ?? [];
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const cell = rows[i]?.[2];
+    if (cell === undefined || cell === "") continue;
+    const normalized = String(cell).replace(",", ".");
+    if (!isNaN(parseFloat(normalized))) {
+      return i + 1; // 1-indexed for Sheets API
+    }
+  }
+  return null;
+}
+
+export async function updateExpenseRow(
+  accessToken: string,
+  spreadsheetId: string,
+  sheetName: string,
+  rowNumber: number,
+  fields: Partial<{ description: string; amount: number; category: string; card: string }>
+): Promise<ExpenseRow> {
+  const sheets = getSheetsClient(accessToken);
+
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `'${sheetName}'!A${rowNumber}:F${rowNumber}`,
+  });
+  const current = res.data.values?.[0] ?? [];
+
+  const updatedRow = [
+    String(current[0] ?? ""),
+    fields.description ?? String(current[1] ?? ""),
+    fields.amount ?? Number(current[2]),
+    fields.category ?? String(current[3] ?? ""),
+    fields.card ?? String(current[4] ?? ""),
+    String(current[5] ?? ""),
+  ];
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `'${sheetName}'!A${rowNumber}`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: [updatedRow] },
+  });
+
+  return {
+    date: String(updatedRow[0]),
+    description: String(updatedRow[1]),
+    amount: Number(updatedRow[2]),
+    category: String(updatedRow[3]),
+    card: String(updatedRow[4]),
+    contributor: String(updatedRow[5]),
+  };
+}
+
 export async function readSheetRows(
   accessToken: string,
   spreadsheetId: string,
